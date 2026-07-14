@@ -4,30 +4,60 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Unity game project (early prototype). Engine: **Unity 6000.5.3f1**, Universal Render Pipeline (URP 17.5), new Input System (`com.unity.inputsystem` 1.19). The only gameplay scene is `Assets/Scenes/Test.unity`.
+Unity game project (early prototype). Engine: **Unity 6000.5.3f1**, Universal Render Pipeline (URP 17.5), new Input System (`com.unity.inputsystem` 1.19). The only gameplay scene is `Assets/Scenes/Test.unity`. Current focus is basic player movement (branch `v1/basic-movement`).
+
+## Language / tooling constraints
+
+- Scripts compile with **C# 9** (Unity's default for this version). C# 10+ features are **not** available — notably **primary constructors** and **records with `init`** will fail to compile even if the IDE (Rider/VS) suggests them. Write classic constructors by hand.
+- There are no `.asmdef` files, so all scripts compile into a single `Assembly-CSharp`.
 
 ## Building, running, and testing
 
 There is no CLI build/test setup — everything runs through the Unity Editor:
 
 - **Open/run:** Open the project in Unity 6000.5.3f1 and press Play on `Assets/Scenes/Test.unity`.
-- **Tests:** The Unity Test Framework (`com.unity.test-framework`) is installed but no tests exist yet. Run tests via **Window > General > Test Runner** in the Editor (there are no `.asmdef` files, so all scripts compile into `Assembly-CSharp`).
-- **Compile check:** Compilation happens automatically on focusing the Editor, or headlessly with `Unity.exe -batchmode -quit -projectPath "D:/UnityGames/My project"`.
-- The `.csproj` and `.sln` files are Editor-generated — do not hand-edit them; they regenerate.
+- **Tests:** The Unity Test Framework is installed but no tests exist yet. Run via **Window > General > Test Runner**.
+- **Compile check:** Happens automatically on focusing the Editor, or headlessly with `Unity.exe -batchmode -quit -projectPath "D:/UnityGames/My project"`.
+- The `.csproj`/`.sln` files are Editor-generated — do not hand-edit; they regenerate.
 
 ## Code architecture
 
-All gameplay code lives under `Assets/Scripts/`.
+All gameplay code lives under `Assets/Scripts/`. The player system is built on a **composition-based lifecycle-dispatch pattern** — this is the core design and spans several files.
 
-- **Player system (`Assets/Scripts/Player/`)** — intended composition-based design. `PlayerController` (a `MonoBehaviour` requiring a `Rigidbody`) owns the player and instantiates behavior objects (`Jump`, `Move`, `Gravity`, `GroundCheck`) via `Awake`. A comment notes `PlayerController` "is controlled by GameStateManager" — that manager does not exist yet.
-- **`RBManiplulator`** (note the spelling; base class in `Assets/Scripts/`) — base for the player behaviors. It holds a `readonly Rigidbody rb` injected through its constructor. `Jump`, `Move`, and `Gravity` extend it.
-- **`Utils/Floor.cs`** — procedural floor generator. `dupe = false` scales a single tile to `length × width`; `dupe = true` instantiates a grid of tiles. Tile source is the serialized `floorTile` GameObject.
-- **`Utils/InputSystem_Actions.cs`** — generated from `Assets/InputSystem_Actions.inputactions`. **Do not edit by hand**; regenerate from the `.inputactions` asset in the Editor.
+### The lifecycle-action system (`Assets/Scripts/Utils/`)
 
-### Important architectural caveat
+Behaviors are plain C# objects (not `MonoBehaviour`s) that opt into Unity's update phases by implementing marker interfaces:
 
-The `RBManiplulator` family (`RBManiplulator`, `Jump`, `Move`, `Gravity`) derives from `MonoBehaviour` **but also defines constructors and is instantiated with `new`** (e.g. `jump = new Jump(rigidbody)` in `PlayerController`). This is invalid Unity usage — `MonoBehaviour`s cannot be constructed with `new`; they must be added as components. `Gravity.cs` additionally uses invalid C# (`base(rigidbody);` as a statement) and will not compile. When touching the player system, expect to resolve this design: either make these plain C# classes (drop `MonoBehaviour`) so constructor injection works, or make them real components created via `AddComponent`/`GetComponent`.
+- `ILifecycleAction` — empty base marker.
+- `IUpdateAction` → `UpdateTick()`  (dispatched from `Update`)
+- `IFixedUpdateAction` → `FixedTick()`  (dispatched from `FixedUpdate`)
+- `IAfterUpdateAction` → `AfterUpdateTick()`  (dispatched from `LateUpdate`)
 
-## Third-party / template code
+`LifecycleActionHandler` (abstract `MonoBehaviour`, in `LifecycleActionsHandler.cs`) is the engine. A subclass implements `AllActions()` to build and return the list of behavior objects. In `Awake`, the handler sorts each action into per-phase lists by runtime `is` checks, then forwards `Update`/`FixedUpdate`/`LateUpdate` to the matching lists. **Consequence:** an action that implements none of the three phase interfaces is silently never ticked.
 
-`Assets/TutorialInfo/` is leftover Unity template content (the `Readme` asset + its editor drawer). Not part of the game — safe to ignore or delete.
+### RBManiplulatorAction and the player behaviors (`Assets/Scripts/`, `Assets/Scripts/Player/`)
+
+- `RBManiplulatorAction` (note the spelling; in `RBManiplulator.cs`) — abstract base for anything that pushes a `Rigidbody`. Implements `IFixedUpdateAction`, holds a `protected readonly Rigidbody rb` injected via constructor, and leaves `FixedTick()` abstract.
+- `Move` / `Jump` extend `RBManiplulatorAction` **and** additionally implement `IUpdateAction`. The convention here: **read input in `UpdateTick()`, apply physics in `FixedTick()`** (cache the input in a field between the two). Follow this split when adding input-driven behaviors.
+- `Gravity` extends `RBManiplulatorAction` with only a `FixedTick()`.
+
+### Player composition (`Assets/Scripts/Player/`)
+
+`PlayerController : LifecycleActionHandler` (requires a `Rigidbody`, disables built-in gravity) wires everything in `AllActions()`: it creates `InputSystem_Actions`, `AddComponent<GroundState>()`, constructs `move`/`jump`/`gravity` with `new` (passing the rigidbody, serialized tuning fields, input actions, and camera), and returns them. `OnEnable`/`OnDisable` enable/disable the input actions.
+
+Ground detection is component-based and separate from the action objects: `GroundCheck` (`MonoBehaviour`) raycasts down each frame; `GroundState` (`MonoBehaviour`) aggregates all child `GroundCheck`s and exposes `IsGrounded()`. `Jump` consults the injected `GroundState`.
+
+### Why the `new` construction is valid here (unlike before)
+
+`RBManiplulatorAction`, `Move`, `Jump`, `Gravity` are **plain C# classes** — they do not derive from `MonoBehaviour`. That is precisely why constructor injection and `new` are legal. Do **not** reintroduce `MonoBehaviour` to this family; it would break the `new` construction. State that must live as a Unity component (like `GroundState`/`GroundCheck`) stays a separate `MonoBehaviour`.
+
+### Generated / stub code
+
+- `Assets/Scripts/Utils/InputSystem_Actions.cs` is generated from `Assets/InputSystem_Actions.inputactions`. **Do not edit by hand** — regenerate from the `.inputactions` asset.
+- `GameManager` (`Assets/Scripts/GameState/`) is currently an empty stub.
+- `Assets/TutorialInfo/` is leftover Unity template content — not part of the game, safe to ignore or delete.
+
+## Conventions to preserve
+
+- Existing identifiers carry consistent misspellings (`RBManiplulator`, `jumpStrenght`, `ray_lenght`). Match the existing spelling when referencing them rather than "fixing" one call site and breaking compilation.
+- Tuning values (speeds, forces, heights, ray length, layer masks) are `[SerializeField]` fields set in the Inspector, not constants in code.

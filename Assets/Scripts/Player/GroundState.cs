@@ -14,12 +14,13 @@ public class GroundState : MonoBehaviour
         checks.AddRange(gameObject.GetComponentsInChildren<GroundCheck>());
         if(checks.Count == 0)
         {
-            throw new System.Exception("No ground checks on game object!!!!");
+            throw new Exception("No ground checks on game object!!!");
         }
     }
 
     public bool IsGrounded()
     {
-        return checks.Exists(c => c.IsTouchingGround());
+        bool grounded = checks.Exists(c => c.IsTouchingGround());
+        return grounded;
     }
 }

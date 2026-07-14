@@ -1,29 +1,33 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Move : RBManiplulator
+public class Move : RBManiplulatorAction, IUpdateAction
 {
     private readonly float moveSpeed;
     private readonly float turnSpeed;
     private readonly InputAction moveAction;
-    private readonly InputAction mouseDelta;
     private readonly Transform cameraTransform;
+    private Vector2 InputVector;
 
-    public Move(Rigidbody rigidbody, float moveSpeed, InputAction moveAction, InputAction mouseDelta, float turnSpeed, Transform cameraTransform) : base(rigidbody)
+    public Move(Rigidbody rigidbody, float moveSpeed, InputAction moveAction, float turnSpeed, Transform cameraTransform) : base(rigidbody)
     {
         this.moveSpeed = moveSpeed;
         this.moveAction = moveAction;
-        this.mouseDelta = mouseDelta;
         this.turnSpeed = turnSpeed;
         this.cameraTransform = cameraTransform;
     }
 
-    public override void Tick()
+    public void UpdateTick()
     {
-        Vector2 input = moveAction.ReadValue<Vector2>();
-        Vector3 dir = moveDir(input);
+        InputVector = moveAction.ReadValue<Vector2>();
+    }
 
-        Vector3 velocity = new Vector3(dir.x * moveSpeed, rb.linearVelocity.y, dir.z * moveSpeed);
+    public override void FixedTick()
+    {
+        
+        Vector3 dir = MoveDir(InputVector);
+
+        Vector3 velocity = new(dir.x * moveSpeed, rb.linearVelocity.y, dir.z * moveSpeed);
         rb.linearVelocity = velocity;
         
         if (dir.sqrMagnitude > 0.001)
@@ -34,7 +38,7 @@ public class Move : RBManiplulator
 
     }
 
-    private Vector3 moveDir(Vector2 input)
+    private Vector3 MoveDir(Vector2 input)
     {
         Vector3 cam_forward = cameraTransform.forward;
         Vector3 cam_right = cameraTransform.right;

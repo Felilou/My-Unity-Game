@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 074d4ea93ada18d49bfff4a6c6079e8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundCheck
-  ray_lenght: 0.1
+  ray_lenght: 0.3
   layer:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -349,7 +349,7 @@ GameObject:
   - component: {fileID: 339484386}
   - component: {fileID: 339484385}
   - component: {fileID: 339484384}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Obstacle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -588,7 +588,7 @@ GameObject:
   - component: {fileID: 643699544}
   - component: {fileID: 643699543}
   - component: {fileID: 643699542}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Obstacle 2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -746,7 +746,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1061759499}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Course
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -783,7 +783,7 @@ GameObject:
   - component: {fileID: 1127700603}
   - component: {fileID: 1127700602}
   - component: {fileID: 1127700601}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}

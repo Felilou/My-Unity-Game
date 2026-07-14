@@ -17,9 +17,10 @@ public class GroundCheck : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        _IsTouchingGround = Physics.Raycast(transform.position, Vector3.down, ray_lenght, layer);
+        _IsTouchingGround = Physics.Raycast(transform.position, Vector3.down, ray_lenght);
+        Debug.DrawRay(transform.position, Vector3.down * ray_lenght,_IsTouchingGround ? Color.green : Color.red);
     }
 
     public bool IsTouchingGround()
