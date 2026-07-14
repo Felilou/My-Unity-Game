@@ -7,10 +7,14 @@ public class Move : RBManiplulatorAction, IUpdateAction
     private readonly float turnSpeed;
     private readonly InputAction moveAction;
     private readonly Transform cameraTransform;
+    private readonly GroundState groundState;
     private Vector3 dir;
+    private readonly float accellaration;
 
-    public Move(Rigidbody rigidbody, float moveSpeed, InputAction moveAction, float turnSpeed, Transform cameraTransform) : base(rigidbody)
+    public Move(Rigidbody rigidbody, float moveSpeed, InputAction moveAction, float turnSpeed, Transform cameraTransform, GroundState groundState, float accellaration) : base(rigidbody)
     {
+        this.accellaration = accellaration;
+        this.groundState = groundState;
         this.moveSpeed = moveSpeed;
         this.moveAction = moveAction;
         this.turnSpeed = turnSpeed;
@@ -24,10 +28,11 @@ public class Move : RBManiplulatorAction, IUpdateAction
 
     public override void FixedTick()
     {
-        Vector3 velocity = new(dir.x * moveSpeed, rb.linearVelocity.y, dir.z * moveSpeed);
-        rb.linearVelocity = velocity;
+        Vector3 crntVelocity = new(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+        Vector3 horizontalVel = Vector3.MoveTowards(crntVelocity, moveSpeed*dir, accellaration * Time.fixedDeltaTime);
+        rb.linearVelocity = new(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
         
-        if (dir.sqrMagnitude > 0.001)
+        if (dir.sqrMagnitude > 0.001 && groundState.IsGrounded())
         {
             Quaternion target = Quaternion.LookRotation(dir);
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, target, turnSpeed * Time.fixedDeltaTime));

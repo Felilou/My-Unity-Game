@@ -23,6 +23,9 @@ public class PlayerController : LifecycleActionHandler
     [SerializeField]
     float gravity_force;
 
+    [SerializeField]
+    float accellaration;
+
     Camera camera;
 
     void OnEnable()  { InputActions?.Enable(); }
@@ -40,7 +43,7 @@ public class PlayerController : LifecycleActionHandler
 
         rigidbody.useGravity = false;
 
-        move = new Move(rigidbody, move_speed, InputActions.Player.Move, turn_speed, camera.transform);
+        move = new Move(rigidbody, move_speed, InputActions.Player.Move, turn_speed, camera.transform, groundState, accellaration);
         jump = new Jump(rigidbody, jump_height, groundState, InputActions.Player.Jump);
         gravity = new Gravity(rigidbody, gravity_force);
         
