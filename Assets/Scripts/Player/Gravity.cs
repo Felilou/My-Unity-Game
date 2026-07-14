@@ -1,7 +1,7 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class Gravity : RBManiplulator
+public class Gravity : RBManiplulatorAction
 {
     private readonly float strenght;
 
@@ -11,7 +11,7 @@ public class Gravity : RBManiplulator
     }
     
     
-    public override void Tick()
+    public override void FixedTick()
     {
         rb.AddForce(Vector3.down * strenght, ForceMode.Acceleration);
     }

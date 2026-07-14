@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 //Singleton - kümmert sich NUR um playermovement
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerController : MonoBehaviour
+public class PlayerController : LifecycleActionHandler
 {
     private InputSystem_Actions InputActions;
     private Rigidbody rigidbody;
@@ -25,8 +25,6 @@ public class PlayerController : MonoBehaviour
 
     Camera camera;
 
-    readonly List<RBManiplulator> rBManiplulators = new();
-
     void OnEnable()  { InputActions?.Enable(); }
     void OnDisable() { InputActions?.Disable(); }
 
@@ -35,31 +33,21 @@ public class PlayerController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
 
         camera = Camera.main;
-        InputActions = new InputSystem_Actions();
 
+        InputActions = new InputSystem_Actions();
         rigidbody = GetComponent<Rigidbody>();
         groundState = gameObject.AddComponent<GroundState>();
 
         rigidbody.useGravity = false;
-        
-        move = new Move(rigidbody, move_speed, InputActions.Player.Move, InputActions.Player.Look, turn_speed, camera.transform);
-        jump = new Jump(rigidbody, jump_height, groundState);
+
+        move = new Move(rigidbody, move_speed, InputActions.Player.Move, turn_speed, camera.transform);
+        jump = new Jump(rigidbody, jump_height, groundState, InputActions.Player.Jump);
         gravity = new Gravity(rigidbody, gravity_force);
-
-        rBManiplulators.Add(jump);
-        rBManiplulators.Add(move);
-        rBManiplulators.Add(gravity);
-    }
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
         
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
+    protected override List<ILifecycleAction> AllActions()
     {
-        rBManiplulators.ForEach((m) => {m.Tick();});
+        return new List<ILifecycleAction>(){move, jump, gravity};
     }
 }

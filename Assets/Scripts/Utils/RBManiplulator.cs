@@ -1,15 +1,15 @@
 using UnityEngine;
 
-public abstract class RBManiplulator : IAction
+public abstract class RBManiplulatorAction : IFixedUpdateAction
 {
 
     protected readonly Rigidbody rb; 
 
-    public RBManiplulator(Rigidbody rigidbody)
+    public RBManiplulatorAction(Rigidbody rigidbody)
     {
         rb = rigidbody;
     }
 
-    abstract public void Tick();
+    public abstract void FixedTick();
 
 }
