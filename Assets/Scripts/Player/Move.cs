@@ -7,7 +7,7 @@ public class Move : RBManiplulatorAction, IUpdateAction
     private readonly float turnSpeed;
     private readonly InputAction moveAction;
     private readonly Transform cameraTransform;
-    private Vector2 InputVector;
+    private Vector3 dir;
 
     public Move(Rigidbody rigidbody, float moveSpeed, InputAction moveAction, float turnSpeed, Transform cameraTransform) : base(rigidbody)
     {
@@ -19,23 +19,19 @@ public class Move : RBManiplulatorAction, IUpdateAction
 
     public void UpdateTick()
     {
-        InputVector = moveAction.ReadValue<Vector2>();
+        dir = MoveDir(moveAction.ReadValue<Vector2>());
     }
 
     public override void FixedTick()
     {
-        
-        Vector3 dir = MoveDir(InputVector);
-
         Vector3 velocity = new(dir.x * moveSpeed, rb.linearVelocity.y, dir.z * moveSpeed);
         rb.linearVelocity = velocity;
         
         if (dir.sqrMagnitude > 0.001)
         {
             Quaternion target = Quaternion.LookRotation(dir);
-            rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, target, turnSpeed));
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, target, turnSpeed * Time.fixedDeltaTime));
         }
-
     }
 
     private Vector3 MoveDir(Vector2 input)
